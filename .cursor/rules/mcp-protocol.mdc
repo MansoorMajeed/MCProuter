@@ -1,0 +1,61 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# MCP Protocol Implementation Guide
+
+This rule covers Model Context Protocol (MCP) specific implementation details for MCProuter.
+
+## Transport Implementation
+
+### Streamable HTTP (2025-03-26 Specification)
+MCProuter implements the HTTP-only subset of the Streamable HTTP transport:
+- **No SSE streaming support** - uses HTTP request/response only
+- **Session management** via `Mcp-Session-Id` headers
+- **JSON-RPC 2.0** message format over HTTP
+
+### Session Affinity Requirements
+MCP assumes a 1:1 client-to-server relationship. MCProuter maintains this by:
+1. Assigning session IDs to new clients
+2. Using consistent hashing to route sessions to specific backend servers
+3. Maintaining session state across MCProuter instances
+
+## Protocol Translation
+
+### Client-Side Interface
+- Accept standard MCP client connections
+- Generate and manage `Mcp-Session-Id` headers
+- Handle protocol negotiation and capability exchange
+- Translate between client requests and backend routing
+
+### Backend Communication
+- Maintain persistent connections to MCP server instances
+- Forward session-bound requests to appropriate backends
+- Handle server capability advertising and discovery
+- Manage connection pooling and reuse
+
+## Message Routing Patterns
+
+### Request Types
+1. **Initialization requests**: Route to least-loaded backend, establish session
+2. **Session-bound requests**: Route via session ID to established backend
+3. **Capability queries**: May route to any backend or aggregate responses
+
+### Error Handling
+- Handle backend server failures gracefully
+- Implement retry logic for transient failures
+- Provide clear error messages to clients
+- Maintain session state during backend transitions
+
+## Capability Management
+
+### Backend Discovery
+- Query backend servers for their capabilities on startup
+- Monitor capability changes through health checks
+- Route requests based on required capabilities when possible
+
+### Capability Aggregation
+- Aggregate capabilities from all available backends
+- Present unified capability set to clients
+- Handle capability-specific routing decisions

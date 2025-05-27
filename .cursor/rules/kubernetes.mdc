@@ -1,0 +1,57 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Kubernetes Integration Guide
+
+This rule covers Kubernetes-specific development patterns for MCProuter.
+
+## Service Discovery Implementation
+
+### Pod Watching Strategy
+MCProuter uses the Kubernetes API to dynamically discover MCP server pods:
+
+```go
+// Watch for pods with specific labels
+pods := clientset.CoreV1().Pods(namespace).Watch(ctx, metav1.ListOptions{
+    LabelSelector: "app=mcp-server",
+})
+
+for event := range pods.ResultChan() {
+    pod := event.Object.(*v1.Pod)
+    if pod.Status.Phase == v1.PodRunning {
+        // Add pod.Status.PodIP:port to backend pool
+        backends.Add(pod.Status.PodIP + ":8080")
+    }
+}
+```
+
+### Required RBAC Permissions
+MCProuter needs the following Kubernetes permissions:
+- `get`, `list`, `watch` on pods in the target namespace
+- Access to read pod labels and status
+- Optional: access to endpoints for service discovery
+
+### Backend Pool Management
+- Only route to pods in `Running` state
+- Integrate with Kubernetes readiness probes
+- Handle pod lifecycle events (add/remove/update)
+- Implement graceful removal of unhealthy backends
+
+## Deployment Considerations
+
+### Horizontal Scaling
+- Deploy MCProuter as a Deployment with multiple replicas
+- Use consistent hashing for session affinity across instances
+- Implement proper shutdown handling for graceful pod termination
+
+### Health Checks
+- Provide `/health` and `/ready` endpoints
+- Integrate with Kubernetes liveness and readiness probes
+- Monitor backend connection health
+
+### Configuration
+- Use ConfigMaps for non-sensitive configuration
+- Use Secrets for any authentication credentials
+- Support environment variable configuration for cloud-native deployment

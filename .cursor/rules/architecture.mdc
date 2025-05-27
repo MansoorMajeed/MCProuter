@@ -1,0 +1,80 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Architecture & Scalability Guide
+
+This rule covers architectural patterns and scalability considerations for MCProuter.
+
+## Load Balancing Strategy
+
+### Consistent Hashing Implementation
+MCProuter uses consistent hashing to maintain session affinity:
+
+```go
+// Session routing logic
+func (r *Router) RouteSession(sessionID string) Backend {
+    if sessionID == "" {
+        // New session - use round-robin
+        return r.backends.RoundRobin()
+    }
+    // Existing session - use consistent hashing
+    return r.hashRing.GetNode(sessionID)
+}
+```
+
+### Backend Pool Management
+- Maintain a dynamic pool of available MCP server backends
+- Implement health checking to remove failed backends
+- Support weighted load balancing based on backend capacity
+- Handle backend addition/removal without session disruption
+
+## Horizontal Scaling Patterns
+
+### MCProuter Instance Scaling
+Multiple MCProuter instances can run simultaneously:
+1. **Stateless design**: No shared state between instances
+2. **Session-based routing**: Use `Mcp-Session-Id` for consistent routing
+3. **Failure handling**: Clients reinitialize on instance failure
+
+### Session State Management
+- Each MCProuter instance maintains `session_id → backend_server` mappings
+- Session state is ephemeral and reconstructible
+- No persistent storage required for session mapping
+
+## Connection Management
+
+### Client Connections
+- Support multiple concurrent client connections
+- Implement connection pooling for efficiency
+- Handle graceful client disconnection
+
+### Backend Connections
+- Maintain persistent connections to backend servers
+- Implement connection retry and backoff strategies
+- Monitor connection health and automatically reconnect
+
+## Performance Considerations
+
+### Resource Optimization
+- Use Go's goroutine model for concurrent request handling
+- Implement efficient memory management for session tracking
+- Optimize network I/O with proper buffering
+
+### Monitoring & Observability
+- Expose metrics for session count, backend health, and request latency
+- Implement structured logging with context propagation
+- Provide debugging endpoints for troubleshooting
+
+## Failure Modes & Recovery
+
+### Backend Failure Handling
+- Detect backend failures through health checks
+- Route around failed backends automatically
+- Implement graceful degradation strategies
+
+### MCProuter Instance Failure
+- Clients can reconnect to any available MCProuter instance
+- Session reinitialization on instance failure is acceptable
+- No data loss due to stateless design

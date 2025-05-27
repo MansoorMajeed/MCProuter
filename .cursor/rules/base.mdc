@@ -1,0 +1,52 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# MCProuter Development Guide
+
+MCProuter is a reverse proxy/router for horizontally scaled MCP (Model Context Protocol) servers in Kubernetes environments.
+
+## Project Overview
+
+This project implements a cloud-native solution for scaling MCP servers horizontally in Kubernetes, solving the core issue of session affinity in MCP's 1:1 client-to-server relationship model.
+
+### Key Architecture Components
+
+- **Session Affinity**: Maintains consistent routing of client sessions to backend servers
+- **Streamable HTTP Transport**: Uses HTTP-only subset (no SSE streaming) of the 2025-03-26 specification
+- **Consistent Hashing**: Enables horizontal scaling of MCProuter instances
+- **Kubernetes Service Discovery**: Dynamically discovers MCP server pods via K8s API
+- **Load Balancing**: Intelligent distribution of client sessions across available backends
+
+### Core Files Structure
+
+- [go.mod](mdc:go.mod) - Go module definition
+- [README.md](mdc:README.md) - Project documentation
+- [docs/brainstorm.md](mdc:docs/brainstorm.md) - Architectural design and problem analysis
+
+## Development Guidelines
+
+### Go Standards
+- Use Go 1.24.2+ as specified in go.mod
+- Follow standard Go project layout conventions
+- Implement proper error handling and context usage
+- Use structured logging for observability
+
+### Kubernetes Integration
+- Implement RBAC-aware pod discovery
+- Use label selectors for backend MCP server identification
+- Integrate with Kubernetes health checks and readiness probes
+- Handle pod lifecycle events gracefully
+
+### MCP Protocol Compliance
+- Implement Streamable HTTP transport specification
+- Maintain session state with `Mcp-Session-Id` headers
+- Support protocol translation between client and server sides
+- Handle connection management and reconnection logic
+
+### Architecture Patterns
+- Use consistent hashing for session routing
+- Implement circuit breaker patterns for backend health
+- Apply graceful degradation strategies
+- Design for horizontal scalability from the start
