@@ -20,8 +20,14 @@ Client → K8s Service → [Server Pod A, Server Pod B, Server Pod C]
 ```
 
 ## Transport Decision
-**Using**: Streamable HTTP (2025-03-26) with HTTP-only subset (no SSE streaming)
+**Using**: Full Streamable HTTP (2025-03-26) protocol including SSE streaming support
 **Not supporting**: Older HTTP+SSE specification (2024-11-05)
+
+### Why Full Protocol Support:
+- **Server-initiated messages**: Notifications, progress updates, live data
+- **Streaming responses**: For long-running operations  
+- **Interactive experiences**: Real-time tool execution feedback
+- **Protocol compliance**: Clients expect complete Streamable HTTP support
 
 ## MCProuter Architecture
 
@@ -34,14 +40,17 @@ Client → K8s Service → [Server Pod A, Server Pod B, Server Pod C]
 
 ### Key Responsibilities
 
-1. **Session Affinity**: Once a client connects, keep routing their requests to the same backend server instance
+1. **Session Affinity**: Route all requests/streams with same session ID to same backend server
 
-2. **Protocol Translation**: Handle Streamable HTTP transport on both client and server sides
+2. **Full Protocol Support**: Handle complete Streamable HTTP transport including:
+   - HTTP POST requests with JSON-RPC messages
+   - SSE stream proxying for real-time communication
+   - Session management with `Mcp-Session-Id` headers
 
 3. **Connection Management**: 
-   - Maintain SSE streams with clients
-   - Manage backend connections to server instances
-   - Handle reconnection logic
+   - Proxy SSE streams between clients and backends
+   - Manage HTTP request/response flows
+   - Handle connection cleanup on session termination
 
 4. **Load Balancing**: Intelligently distribute new client sessions across available backend servers
 
@@ -66,15 +75,21 @@ MCProuter itself needs horizontal scaling, creating the same session affinity is
 ```
 
 ### Solution: Consistent Hashing
-Using HTTP-only requests with `Mcp-Session-Id` headers enables consistent hashing:
+Using `Mcp-Session-Id` headers enables consistent hashing for both HTTP requests and SSE streams:
 
 #### Routing Strategy:
 1. **New sessions** (no session ID): Route via round-robin
 2. **Existing sessions** (with session ID): Route via consistent hashing on session ID
 3. **Session mapping**: Each MCProuter instance maintains `session_id → backend_server` mappings
 
+#### SSE Stream Handling:
+- **Same session affinity**: SSE streams route to same MCProuter instance as HTTP requests
+- **Stream proxying**: MCProuter maintains SSE connection between client and backend
+- **Stream state**: Managed per session within each MCProuter instance
+
 #### Failure Handling:
-- If MCProuter instance dies, affected clients reinitialize (acceptable trade-off)
+- If MCProuter instance dies, affected clients' HTTP requests and SSE streams fail
+- Clients reinitialize and reconnect (acceptable trade-off)
 - No shared state required between MCProuter instances
 
 ## Backend Service Discovery

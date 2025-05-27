@@ -5,7 +5,7 @@ alwaysApply: false
 ---
 # MCP Protocol Implementation Guide
 
-This rule covers Model Context Protocol (MCP) specific implementation details for MCProuter.
+This rule covers Model Context Protocol (MCP) specific implementation details for MCProuter. For complete protocl specification, see [MCP Transport Specification](mdc:docs/mcp-transport-spec.md)
 
 ## Transport Implementation
 
